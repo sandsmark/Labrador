@@ -121,6 +121,7 @@ std::unique_ptr<short[]> isoBuffer::readBuffer(double sampleWindow, int numSampl
 
     double itr = delaySamples;
     short *data = &m_buffer[(m_back-1) + m_bufferLen];
+    uint64_t total = 0;
     for (int pos = 0; pos < numSamples && itr < m_insertedCount; pos++)
     {
         if (int(itr) < 0 || ((m_back-1) + m_bufferLen - itr) >= m_bufferLen * 2) {
@@ -143,6 +144,7 @@ std::unique_ptr<short[]> isoBuffer::readBuffer(double sampleWindow, int numSampl
             short minimum = std::numeric_limits<short>::max();
             short maximum = std::numeric_limits<short>::min();
             const int end = qMin<int>(m_insertedCount, itr + timeBetweenSamples);
+//            int avg = 0;
             for (int i=itr; i<end; i++) {
                 // 29,94 │       movq      (%rdx,%rdi,2),%xmm4
                 //  7,46 │       pshuflw   $0x1b,%xmm4,%xmm4
@@ -164,8 +166,14 @@ std::unique_ptr<short[]> isoBuffer::readBuffer(double sampleWindow, int numSampl
                 // 4,34 │       punpcklwd %xmm6,%xmm4
                 // 5,98 │       paddd     %xmm4,%xmm3
                 numPositive += val >= 0;
+
+                total += val;
+//                avg += val;
             }
-            readData[pos] = maximum;
+//            avg /= end - itr;
+            const double avg = total / (timeBetweenSamples * pos);
+            readData[pos] = (avg - minimum) * (avg - minimum) > (maximum - avg) * (maximum - avg ) ? minimum: maximum;
+//            readData[pos] = maximum;
 //            readData[pos] = (minimum < 0 && qAbs(minimum)) > qAbs(maximum) ? minimum: maximum;// numPositive > numNegative ? maximum: minimum;
 //            readData[pos] = numPositive > numNegative ? maximum: minimum;
         } else {
